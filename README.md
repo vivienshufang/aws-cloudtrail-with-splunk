@@ -52,7 +52,7 @@ It is a good idea to monitor all regions even you don't create services on all o
 * ap-southeast-1	
 * ap-southeast-2
 
-To enable CloudTrail on these regions, run this code 
+To enable CloudTrail on these regions, run [create-cloudtrail](./scripts/create-cloudtrail.sh)
 
 The script calls AWSCLI cloudtrail command to:
 
