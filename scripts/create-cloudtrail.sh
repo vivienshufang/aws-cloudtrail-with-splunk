@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Supported regions
 allregions="us-east-1 us-west-1 us-west-2 eu-west-1 sa-east-1 ap-northeast-1 ap-southeast-1 ap-southeast-2"
@@ -14,6 +15,7 @@ help(){
     echo " -h         : Help"
 }
 
+dryrun=0
 while getopts "a:b:c:r:hn" OPTION
 do
     case $OPTION in
@@ -56,6 +58,9 @@ if [ -z "$accountname" ]; then
     fi
 fi
 
+# Don't exist on non-zero code because the following aws commmands exit code
+# is '1' on sucess.
+set +e 
 # Cloudtrail name
 trailname=${accountname}-cloudtrail
 
@@ -70,10 +75,14 @@ else
         --include-global-service-events true
 fi
 
-# Create other cloudtrails, but set no-include-global-service-events to 
+# Create other cloudtrails, set no-include-global-service-events to 
 # avoid global service log duplications
 for i in $allregions
 do 
+    # Skip the region that get global event.
+    if [[ $i = "$region" ]]; then
+        continue
+    fi
     snstopic=${trailname}-$i
     if [ $dryrun -eq 1 ]; then
         echo "aws cloudtrail create-subscription --region $i --name $trailname --s3-use-bucket $bucket --sns-new-topic $snstopic --include-global-service-events false"

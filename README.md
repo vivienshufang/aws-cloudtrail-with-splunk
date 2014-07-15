@@ -10,8 +10,45 @@ Traditionally system administrators monitor a system's integrity using intrusion
 a central log server for auditing and security analysis.
 
 For services running on AWS, another important operation and security related auditing is to monitor API calls that can change services and environments. 
-The AWS CloudTrail is a service that records API call information that includes the identity of the API caller, the time of the API call, the source IP address of the API caller, the request parameters, and the response elements returned by the AWS service. The AWS API call history produced by CloudTrail enables security analysis, resource change tracking, and compliance auditing. ClouldTail service delivers API reports to a S3 bucket within 15 
-minutes of an API call. 
+Use cases enabled by CloudTrail service:
+
+* Security Analysis
+* Track Changes to AWS Resources
+* Troubleshoot Operational Issues
+* Compliance Aid
+
+Here is an example of API call recorded by CloudTrail and how Spunk reports it (when, what, who, where, etc.)
+
+	{ [-]
+	   awsRegion: us-west-2
+	   eventID: 7ad60379-0e2e-4b6c-8a6f-100f00fc5df1
+	   eventName: ModifyReservedInstances
+	   eventSource: ec2.amazonaws.com
+	   eventTime: 2014-07-14T19:29:42Z
+	   eventVersion: 1.01
+	   requestID: 900f0797-0f2d-43dd-bcf5-41e1cfbc5c9f
+	   requestParameters: { [-]
+	     clientToken: fa8494bb-8546-4fc4-9bb8-8dc84e7d0015
+	     reservedInstancesSet: { [+]
+	     }
+	     targetConfigurationSet: { [+]
+	     }
+	   }
+	   responseElements: { [-]
+	     reservedInstancesModificationId: rimod-f0713af8-0984-42ff-8016-3dfea813b209
+	   }
+	   sourceIPAddress: 171.66.221.130
+	   userAgent: console.ec2.amazonaws.com
+	   userIdentity: { [-]
+	     accessKeyId: ASIAJYFJCMKALLLUR36Q
+	     accountId: 972569769453
+	     arn: arn:aws:sts::972569769453:assumed-role/admin-saml/john
+	     principalId: AROAIVEEFBU3CT2SWXT3Y:jonh
+	     sessionContext: { [+]
+	     }
+	     type: AssumedRole
+	   }
+	}
 
 ## Visualized reporting tools
 Many tools are available to generate visualized reports using the CloudTrail files stored in S3 bucket. Here are listed 
@@ -23,21 +60,36 @@ In this integration, we create CloudService for each region and Simple Notificat
 
 ![](./images/splunk-aws-integration.png)
 
-## Prerequisites
+## Prerequisites for this setup
 
-* Install AWSCLI
-[AWSCLI] (https://github.com/aws/aws-cli) command line tool is used create Cloudtrail. To install(or upgrade) the package
+All the setups can be done through AWS console, but we use a script for CloudTrail setup to make sure we have naming schema consistency cross
+all regions.
+
+* Install AWSCLI 
+
+    [AWSCLI] (https://github.com/aws/aws-cli) command line tool is used to create Cloudtrail. To install(or upgrade) the package
 
         pip install awscli [--upgrade]
 
-This will install _aws_ command under /usr/local/bin. There 3 ways to setup AWS CLI AWS credentials. The examples here assumes you run the Cloudtrail creation code on an on-premise system and use a configuration file for key id and key secret. If you run it on EC2, you need to create an IAM role and
+    This will install _aws_ command under /usr/local/bin. There are three ways to setup AWS CLI AWS credentials. The examples here assumes you run the Cloudtrail creation code on an on-premise system and use a configuration file for key id and key secret. If you run it on EC2, you need to create an IAM role and
 the aws cli can use role-based token automatically.
 
 * Create a S3 bucket for CloudTrail report
-We will aggregate CloudTrail reports from different regions into one S3 bucket. A bucket name used in this example is:
+
+    We will aggregate CloudTrail reports from different regions into one S3 bucket. A bucket name used in this example is:
 _accountname.myfqdn_. 
 
 Follow the instructions here (http://docs.aws.amazon.com/awscloudtrail/latest/userguide/create_trail_using_the_console.html), but skip the optional steps. We will setup SNS using [create-cloudtrail](./scripts/create-cloudtrail.sh). 
+
+* Create an IAM user
+
+    You should create an IAM user with the minimum access privileges needed. 
+
+For example, you can create an IAM user _cloudtrail-splunkapp_  which has permission to read SQS, delete message from SQS, and get data from S3 bucket. The following polices should work if you use canned AWS policy generator:
+
+* Readonly access to S3 bucket
+* Readonly access to CloudTrail
+* Full access to the SQS (it deletes messages after read stuff from the message queue)
 
 ## Create AWS CloudTrail
 
@@ -52,7 +104,7 @@ For security auditing, you should monitor all regions that CloudTrail service is
 * ap-southeast-1	
 * ap-southeast-2
 
-To enable CloudTrail on these regions, run [create-cloudtrail](./scripts/create-cloudtrail.sh)
+To enable CloudTrail on these regions, download and run [create-cloudtrail](./scripts/create-cloudtrail.sh)
 
 The script calls AWSCLI cloudtrail command to:
 
@@ -60,7 +112,9 @@ The script calls AWSCLI cloudtrail command to:
 * Create Simple Notification Service (SNS) topic for the Cloudtrail service in each region
 * Aggregate all regions audit reports in one S3 bucket (pre-created)
 
-We consolidate all CloudTrails reports into one S3 bucket _accountname.myfqdn_. The script takes care of creates necessary access policies. Global events - generated by services that don't have a region, e.g. Identity and Access Management (IAM) - will be logged in one region only. 
+The script has a dryrun option to generate the commands so you can see what the actual commands without having to run it. 
+
+We consolidate all CloudTrails reports into one S3 bucket that you give at the command line. The script takes care of creating necessary access policies. Global events - generated by services that don't have a regional endpoint, e.g. Identity and Access Management (IAM) - will be logged in one region that you defined at the command line. 
 
 ## Create a Simple Queue Service (SQS) 
 
@@ -68,15 +122,6 @@ We will setup one message queue named _accountname-cloudtrail_ in one region. It
 
 SQS is needed in Splunk AWS app configuration. Splunk AWS app runs at 1 minute interval to retrieve messages from AWS SQS service. The message body contains the S3 bucket location for the Cloudtrail report. Splunk then calls S3 API to get Cloudtrail reports from the S3 bucket.
 
-## Create IAM user
-
-You should create an IAM user with the minimum access privileges needed. 
-
-For example, you can create an IAM user _cloudtrail-splunkapp_  which has permission to read SQS, delete message from SQS, and get data from S3 bucket. The following polices should work:
-
-* readonly access to S3 bucket
-* readonly access to CloudTrail
-* full access to the SQS (it deletes messages after read stuff from the message queue)
 
 ## Setup Splunk
 
