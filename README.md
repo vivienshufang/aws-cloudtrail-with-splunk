@@ -21,7 +21,7 @@ Many tools are available to generate visualized reports using the CloudTrail fil
 
 In this integration, we create CloudService for each region and Simple Notification Service (SNS) topic for each CloudService. The reports from all regions are aggregated to one S3 bucket. One Simple Queue Service (SQS) is subscribed to all the SNS topics. 
 
-![](./splunk-aws-integration.png)
+![](./images/splunk-aws-integration.png)
 
 ## Prerequisites
 
@@ -52,7 +52,7 @@ It is a good idea to monitor all regions even you don't create services on all o
 * ap-southeast-1	
 * ap-southeast-2
 
-To enable CloudTrail on these regions, run [create-cloudtrail](./create-cloudtrail.sh)
+To enable CloudTrail on these regions, run this code 
 
 The script calls AWSCLI cloudtrail command to:
 
