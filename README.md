@@ -1,35 +1,58 @@
 # How to Setup AWS CouldTrail with Splunk
 
-This document describes how to setup Cloudtail in AWS for API call auditing, and how to setup SpunkAppForAWS to pull Cloudtrail reports into Splunk.
+This document describes how to setup AWS Cloudtail services to audit API calls and how to setup SpunkAppForAWS app to generate reports in Splunk.
 
 ## What is CloudTrail
-AWS CloudTrail is an AWS service. When enabled, it captures AWS API calls made by or on behalf of an AWS account and delivers log files to an Amazon S3 bucket. 
+[AWS CloudTrail] (http://aws.amazon.com/cloudtrail/) is an AWS service. When enabled, it captures AWS API calls made by or on behalf of an AWS account and delivers log files to an Amazon S3 bucket. 
 
 ## Why use CloudTrail
-We monitor file system integrity (e.g. tripwire), and send system logs to central log server as part of the standard setup for a system. For AWS instances, we also need to monitor AWS API calls made to the AWS environment. 
+Traditionally system administrators monitor a system's integrity using intrusion detection tools such as Tripwire. System logs are usually sent to 
+a central log server for auditing and security analysis.
 
-The CloudTrail recorded information includes the identity of the API caller, the time of the API call, the source IP address of the API caller, the request parameters, and the response elements returned by the AWS service. The AWS API call history produced by CloudTrail enables security analysis, resource change tracking, and compliance auditing.
+For services running on AWS, another important operation and security related auditing is to monitor API calls that can change services and environments. 
+The AWS CloudTrail is a service that records API call information that includes the identity of the API caller, the time of the API call, the source IP address of the API caller, the request parameters, and the response elements returned by the AWS service. The AWS API call history produced by CloudTrail enables security analysis, resource change tracking, and compliance auditing. ClouldTail service delivers API reports to a S3 bucket within 15 
+minutes of an API call. 
 
-## Install AWSCLI
-We use AWSCLI command line tool to create Cloudtrail. There is no Debian Package. To install(or upgrade) the package:
+## Visualized reporting tools
+Many tools are available to generate visualized reports using the CloudTrail files stored in S3 bucket. Here are listed 
+[AWS partners](http://aws.amazon.com/cloudtrail/partners/). This documentation describes how to use [SplunkAppforAWS](http://apps.splunk.com/app/1274/) to consume Cloudtrail data and generate reports. 
+
+## The CloudTrail and Spunk integration
+
+In this integration, we create CloudService for each region and Simple Notification Service (SNS) topic for each CloudService. The reports from all regions are aggregated to one S3 bucket. One Simple Queue Service (SQS) is subscribed to all the SNS topics. 
+
+![](./splunk-aws-integration.png)
+
+## Prerequisites
+
+* Install AWSCLI
+[AWSCLI] (https://github.com/aws/aws-cli) command line tool is used create Cloudtrail. To install(or upgrade) the package
 
         pip install awscli [--upgrade]
 
-This will install the tool under /opt/aws. 
+This will install _aws_ command under /usr/local/bin. There 3 ways to setup AWS CLI AWS credentials. The examples here assumes you run the Cloudtrail creation code on an on-premise system and use a configuration file for key id and key secret. If you run it on EC2, you need to create an IAM role and
+the aws cli can use role-based token automatically.
+
+* Create a S3 bucket for CloudTrail report
+We will aggregate CloudTrail reports from different regions into one S3 bucket. A bucket name used in this example is:
+_accountname.myfqdn_. 
+
+Follow the instructions here (http://docs.aws.amazon.com/awscloudtrail/latest/userguide/create_trail_using_the_console.html), but skip the optional steps. We will setup SNS using a script. 
 
 ## Create AWS CloudTrail
 
-Even we don't use all of the available regions to our AWS account, we should still monitor these regions that CloudTrail service is available:
+It is a good idea to monitor all regions even you don't create services on all of the available regions to your AWS account.
 
 * us-east-1
 * us-west-1
 * us-west-2
 * eu-west-1
 * sa-east-1
+* ap-northeast-1
+* ap-southeast-1	
+* ap-southeast-2
 
-To enable CloudTrail on these regions, run:
-
-        /usr/sbin/create-cloudtrail
+To enable CloudTrail on these regions, run [create-cloudtrail](./create-cloudtrail.sh)
 
 The script calls AWSCLI cloudtrail command to:
 
