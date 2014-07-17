@@ -23,9 +23,6 @@ do
         c)
           config=$OPTARG
           ;;
-        r)
-          region=$OPTARG
-          ;;
         n)
           dryrun=1
           ;;
@@ -36,8 +33,13 @@ do
     esac
 done
 
-if [[ -z $config ]]; then
+if [ -z $config ]; then
     help
+    exit 1
+fi
+
+if [ ! -f $config ]; then
+    echo "$config doesn't exist."
     exit 1
 fi
 
@@ -81,3 +83,24 @@ do
     fi
 done
 [ $dryrun -eq 1 ] && echo "Dryrun only. Nothing changed." 
+
+# Delete sqs?
+answer='N'
+queuename=${accountname}-cloudtrail
+if aws sqs get-queue-url --queue-name $queuename > /dev/null 2>&1; then
+    echo -n "Do you want to delete SQS $queuename? [Y/N]"
+    read answer
+    echo ""
+    if [ "X$answer" != "XY" ]; then
+        echo "Do nothing. Quit."
+        exit 0
+    else
+        queueurl=$(aws sqs get-queue-url --queue-name idg-aws-dev-cloudtrail --query QueueUrl | sed -s 's/"//g')
+        if [ $dryrun -eq 0 ]; then
+            aws sqs delete-queue --queue-url $queueurl
+        else
+            echo "aws sqs delete --queue-url $queueurl"
+            echo "Dryrun mode. Nothing is changed."
+        fi
+    fi
+fi

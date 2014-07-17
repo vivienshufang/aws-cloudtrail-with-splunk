@@ -52,6 +52,11 @@ if ! aws s3 ls $bucket > /dev/null 2>&1; then
     exit 1
 fi
 
+if [ ! -f $config ]; then
+    echo "$config doesn't exist."
+    exit 1
+fi
+
 if [ -z "$accountname" ]; then
     answer='N'
     accountname=$(aws iam get-user --query User.UserName| sed -s 's/"//g')
@@ -99,3 +104,25 @@ do
             --include-global-service-events false
     fi
 done
+
+# For SplunkAppForAWS, you need a SQS. Other applications may not need this
+# Create one primary cloudtrail which will include other trails logs
+
+# Cloudtrail SQS and Trail name
+queuename=${accountname}-cloudtrail
+answer='N'
+echo "Splunk integration needs a message queue."
+echo -n "Do you want to create SQS $queuename? [Y/N]"
+read answer
+echo ""
+if [ "X$answer" != "XY" ]; then
+    echo "No queue is created."
+    exit 0
+else
+    echo "aws sqs create-queue --queue-name $queuename --region ${region}"
+    if [ $dryrun -eq 0 ]; then
+        aws sqs create-queue --queue-name $queuename --region ${region}
+    else 
+        echo "Dryrun mode. No queue is created."
+    fi
+fi
