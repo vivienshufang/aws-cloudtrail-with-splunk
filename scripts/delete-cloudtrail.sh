@@ -75,9 +75,9 @@ done
 for i in $allregions
 do 
     snstopic=${trailname}-$i
-    if [ $dryrun -eq 1 ]; then
-        echo "aws cloudtrail delete-trail --region $i --name $trailname"
-    else
+    echo "aws cloudtrail delete-trail --region $i --name $trailname"
+    if [ $dryrun -eq 0 ]; then
         aws cloudtrail delete-trail --region $i --name $trailname
     fi
 done
+[ $dryrun -eq 1 ] && echo "Dryrun only. Nothing changed." 

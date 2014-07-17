@@ -41,8 +41,14 @@ do
     esac
 done
 
-if [[ -z $bucket ]] && [[ -z $config ]] && [[ -z $region ]]; then
+if [[ -z $bucket ]] || [[ -z $config ]] || [[ -z $region ]]; then
     help
+    exit 1
+fi
+
+# Make sure the bucket exist 
+if ! aws s3 ls $bucket > /dev/null 2>&1; then
+    echo "$bucket doesn't exist. Maybe you need fqdn?"
     exit 1
 fi
 
