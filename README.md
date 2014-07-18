@@ -56,7 +56,7 @@ Many tools are available to generate visualized reports using the CloudTrail fil
 
 ## The CloudTrail and Spunk integration
 
-In this integration, we create CloudService for each region and Simple Notification Service (SNS) topic for each CloudService. The reports from all regions are aggregated to one S3 bucket. One Simple Queue Service (SQS) is subscribed to all the SNS topics. 
+In this integration, we create CloudTrail service for each region and Simple Notification Service (SNS) topic for each CloudTrail service. The reports from all regions are aggregated to one S3 bucket. One Simple Queue Service (SQS) is subscribed to all the SNS topics. 
 
 ![](./images/splunk-aws-integration.png)
 
@@ -145,10 +145,10 @@ Setup data input either on Splunk Settings->Data Input console. If you do it on 
 
 It will generate a __inputs.conf__ file, that can be managed by a configuration tool such as Puppet. Here is an example:
 
-    logindex-dev:/opt/splunk/etc/apps/launcher/local# more inputs.conf 
+    splunkidexer:/opt/splunk/etc/apps/launcher/local# more inputs.conf 
     exclude_describe_events = 0
 	index = aws-cloudtrail
-	interval = 1
+	interval = 30
 	remove_files_when_done = 0
 	key_id = key
 	secret_key = secret
