@@ -20,7 +20,7 @@ while getopts "a:b:c:r:hn" OPTION
 do
     case $OPTION in
         a)
-          accoutname=$OPTARG
+          accountname=$OPTARG
           ;;
         b)
           bucket=$OPTARG
@@ -59,7 +59,7 @@ fi
 
 if [ -z "$accountname" ]; then
     answer='N'
-    accountname=$(aws iam get-user --query User.UserName| sed -s 's/"//g')
+    accountname=$(aws iam get-user --query User.UserName| sed 's/\"//g')
     echo -n "Do you accept the default name: $accountname? [Y/N]"
     read answer
     echo ""

@@ -18,7 +18,7 @@ while getopts "a:b:c:r:hn" OPTION
 do
     case $OPTION in
         a)
-          accoutname=$OPTARG
+          accountname=$OPTARG
           ;;
         c)
           config=$OPTARG
@@ -45,7 +45,7 @@ fi
 
 if [ -z "$accountname" ]; then
     answer='N'
-    accountname=$(aws iam get-user --query User.UserName| sed -s 's/"//g')
+    accountname=$(aws iam get-user --query User.UserName| sed 's/\"//g')
     echo -n "Do you accept the default name: $accountname? [Y/N]"
     read answer
     echo ""
@@ -65,7 +65,7 @@ trailname=${accountname}-cloudtrail
 for i in $allregions
 do 
     snstopic=${trailname}-$i
-    topicarn=$(aws sns list-topics --region $i |grep $snstopic | awk '{print $2}' | sed -e 's/"//g')
+    topicarn=$(aws sns list-topics --region $i |grep $snstopic | awk '{print $2}' | sed 's/\"//g')
     if [ $dryrun -eq 1 ]; then
         echo "aws sns delete-topic --topic-arn $topicarn --region $i"
     else
@@ -95,7 +95,7 @@ if aws sqs get-queue-url --queue-name $queuename > /dev/null 2>&1; then
         echo "Do nothing. Quit."
         exit 0
     else
-        queueurl=$(aws sqs get-queue-url --queue-name idg-aws-dev-cloudtrail --query QueueUrl | sed -s 's/"//g')
+        queueurl=$(aws sqs get-queue-url --queue-name idg-aws-dev-cloudtrail --query QueueUrl | sed 's/\"//g')
         if [ $dryrun -eq 0 ]; then
             aws sqs delete-queue --queue-url $queueurl
         else
